@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  sentinel:
+    build:
+      context: .
+      dockerfile: Dockerfile.sentinel
+    container_name: agentarmor-sentinel
+    ports:
+      - "8000:8000"
+    environment:
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+
+    volumes:
+      - ./agentarmor/data:/app/agentarmor/data
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.dashboard
+    container_name: agentarmor-dashboard
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_SENTINEL_URL=http://sentinel:8000
+    depends_on:
+      - sentinel
+    restart: unless-stopped
