@@ -1,5 +1,5 @@
 import React from "react";
-import { Activity, ShieldCheck, AlertTriangle, ShieldAlert, XCircle, ChevronRight, Cpu } from "lucide-react";
+import { Activity, ShieldCheck, AlertTriangle, ShieldAlert, XCircle, ChevronRight, Cpu, Mic } from "lucide-react";
 import { Verdict, ActionType } from "../types";
 
 interface LiveFeedProps {
@@ -97,6 +97,11 @@ export const LiveFeed: React.FC<LiveFeedProps> = ({
                       {v.attack_class && v.attack_class !== "benign" && (
                         <span className="text-[10px] px-1.5 py-0.2 rounded bg-rose-500/10 text-rose-300 border border-rose-500/20 font-mono">
                           {v.attack_class}
+                        </span>
+                      )}
+                      {v.source_type === "voice_transcript" && (
+                        <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.2 rounded bg-violet-500/10 text-violet-300 border border-violet-500/20 font-mono">
+                          <Mic className="w-2.5 h-2.5" /> voice
                         </span>
                       )}
                     </div>

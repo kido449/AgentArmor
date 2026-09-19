@@ -11,6 +11,7 @@ import { WithWithoutAgentArmor } from "./components/WithWithoutAgentArmor";
 import { SignaturesModal } from "./components/SignaturesModal";
 import { CustomInspectTester } from "./components/CustomInspectTester";
 import { LoadingScreen } from "./components/LoadingScreen";
+import { VoiceSessionPanel } from "./components/VoiceSessionPanel";
 import {
   Verdict,
   GatewayStats,
@@ -260,6 +261,9 @@ export default function App() {
 
         {/* WITH vs WITHOUT AgentArmor Demonstration */}
         <WithWithoutAgentArmor />
+
+        {/* LiveKit Voice Sessions */}
+        <VoiceSessionPanel onVoiceVerdictReceived={refreshStats} />
 
         {/* Custom Inspect Tester */}
         <CustomInspectTester onInspectResult={handleInspectCustomResult} />

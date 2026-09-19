@@ -1,5 +1,5 @@
 import React from "react";
-import { Shield, Play, Activity, Database, AlertTriangle, Layers } from "lucide-react";
+import { Shield, Play, Activity, Database, AlertTriangle, Layers, Mic } from "lucide-react";
 
 interface HeaderProps {
   connected: boolean;
@@ -66,6 +66,12 @@ export const Header: React.FC<HeaderProps> = ({
             <Database className="w-3.5 h-3.5 text-cyan-400" />
             <span>Moss Index: <strong className="text-white">{mossCount}</strong> sigs (v{mossVersion})</span>
           </button>
+
+          {/* Voice LiveKit Status */}
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-900 border border-zinc-800 text-xs text-zinc-300">
+            <Mic className="w-3.5 h-3.5 text-violet-400" />
+            <span>Voice <strong className="text-violet-300">LiveKit</strong></span>
+          </div>
 
           {/* Quarantine Alert */}
           {quarantineCount > 0 && (

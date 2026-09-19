@@ -49,6 +49,8 @@ class DetectionPipeline:
         trust_tier: ToolTrustTier = ToolTrustTier.OPEN_WEB,
         tool_query: Optional[str] = None,
         bypass_gateway: bool = False,
+        source_type: str = "tool_output",
+        speaker_id: Optional[str] = None,
     ) -> Verdict:
         t_start = time.perf_counter()
         req_id = f"req-{uuid.uuid4().hex[:8]}"
@@ -67,6 +69,8 @@ class DetectionPipeline:
                 total_overhead_ms=round(t_overhead, 4),
                 sanitized_output=raw_text,
                 timestamp=time.time(),
+                source_type=source_type,
+                speaker_id=speaker_id,
             )
             await telemetry_bus.publish_verdict(verdict)
             return verdict
@@ -197,6 +201,8 @@ class DetectionPipeline:
             total_overhead_ms=round(total_overhead_ms, 4),
             sanitized_output=sanitized_output,
             timestamp=time.time(),
+            source_type=source_type,
+            speaker_id=speaker_id,
         )
 
         # Broadcast verdict to Redis Pub/Sub / SSE stream

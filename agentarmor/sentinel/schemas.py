@@ -67,6 +67,8 @@ class Verdict(BaseModel):
     total_overhead_ms: float
     sanitized_output: Optional[str] = None
     timestamp: float
+    source_type: Optional[str] = "tool_output"  # "tool_output" | "voice_transcript"
+    speaker_id: Optional[str] = None
 
 
 class PolicyThresholds(BaseModel):

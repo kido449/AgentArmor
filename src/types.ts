@@ -31,6 +31,8 @@ export interface Verdict {
   timestamp: number;
   raw_text?: string;
   tool_name?: string;
+  source_type?: "tool_output" | "voice_transcript";
+  speaker_id?: string | null;
 }
 
 export interface QuarantineRecord {
@@ -79,4 +81,21 @@ export interface AgentStepResult {
   is_hijacked: boolean;
   agent_thought: string;
   tool_output_received_by_agent: string;
+}
+
+export interface VoiceTranscript {
+  text: string;
+  speaker_id: string;
+  timestamp: number;
+  action: ActionType | null;
+  verdict: Verdict | null;
+}
+
+export interface VoiceSession {
+  room_name: string;
+  status: "active" | "stopped";
+  participants: string[];
+  created_at: number;
+  transcript_count: number;
+  transcripts: VoiceTranscript[];
 }

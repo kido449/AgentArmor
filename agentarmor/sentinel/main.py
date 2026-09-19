@@ -33,6 +33,16 @@ from agentarmor.sentinel.schemas import (
 )
 from agentarmor.sentinel.telemetry import telemetry_bus
 from agentarmor.simulator.run_attacks import run_simulation
+from agentarmor.livekit.voice_worker import (
+    get_sessions as get_voice_sessions,
+    get_session as get_voice_session,
+    start_livekit_agent_session,
+    stop_session as stop_voice_session,
+)
+from agentarmor.livekit.demo_runner import (
+    simulate_voice_attacks,
+    generate_participant_token,
+)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("agentarmor.sentinel")
@@ -267,3 +277,107 @@ async def run_agent_step(req: AgentStepRequest):
         inject_attack=req.inject_attack,
     )
     return result
+
+
+# =========================================================================
+# LiveKit Voice Ingestion Endpoints
+# =========================================================================
+
+@app.post("/livekit/simulate-voice-attack")
+async def livekit_simulate_voice_attack(limit: int = 10):
+    """
+    Fires pre-built voice injection scenarios through the AgentArmor
+    pipeline as simulated speech transcripts. No real LiveKit room or
+    audio is needed — this is a demo shortcut.
+
+    Each simulated utterance goes through the EXACT SAME Stages A-D
+    pipeline as tool outputs, with source_type='voice_transcript'.
+    """
+    results = await simulate_voice_attacks(limit=limit, delay_ms=150)
+    return {
+        "status": "completed",
+        "source": "voice_simulation",
+        "utterances_processed": len(results),
+        "results": results,
+    }
+
+
+@app.post("/livekit/start-session")
+async def livekit_start_session(room_name: str = "agentarmor-voice-room"):
+    """
+    Creates a LiveKit room and starts an agent that listens for audio,
+    transcribes speech, and routes each utterance through the pipeline.
+
+    Requires LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET, and
+    DEEPGRAM_API_KEY environment variables.
+    """
+    try:
+        session = await start_livekit_agent_session(room_name)
+        return {
+            "status": "started",
+            "room_name": session.room_name,
+            "message": f"Voice sentinel agent is listening in room '{room_name}'",
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to start session: {e}")
+
+
+@app.post("/livekit/stop-session")
+async def livekit_stop_session(room_name: str = "agentarmor-voice-room"):
+    """Stops an active voice session."""
+    success = stop_voice_session(room_name)
+    if not success:
+        raise HTTPException(status_code=404, detail=f"No active session for room '{room_name}'")
+    return {"status": "stopped", "room_name": room_name}
+
+
+@app.get("/livekit/sessions")
+async def livekit_list_sessions():
+    """Returns all voice sessions with their transcript/verdict history."""
+    sessions = get_voice_sessions()
+    result = []
+    for room_name, session in sessions.items():
+        result.append({
+            "room_name": session.room_name,
+            "status": session.status,
+            "participants": session.participants,
+            "created_at": session.created_at,
+            "transcript_count": len(session.transcripts),
+            "transcripts": [
+                {
+                    "text": t.text,
+                    "speaker_id": t.speaker_id,
+                    "timestamp": t.timestamp,
+                    "action": t.action,
+                    "verdict": t.verdict,
+                }
+                for t in session.transcripts[-50:]  # Last 50 transcripts
+            ],
+        })
+    return {"sessions": result, "count": len(result)}
+
+
+@app.get("/livekit/demo-token")
+async def livekit_demo_token(
+    room_name: str = "agentarmor-voice-room",
+    identity: str = "dashboard-user",
+):
+    """
+    Generates a participant token so a browser user can join the LiveKit
+    room and speak into their microphone for real-time voice testing.
+    """
+    livekit_url = os.environ.get("LIVEKIT_URL")
+    token = generate_participant_token(room_name, identity)
+    if not token:
+        raise HTTPException(
+            status_code=400,
+            detail="LiveKit credentials not configured. Set LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET.",
+        )
+    return {
+        "token": token,
+        "livekit_url": livekit_url,
+        "room_name": room_name,
+        "identity": identity,
+    }
