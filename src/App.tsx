@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Header } from "./components/Header";
+import { LightRays } from "./components/LightRays";
 import { LatencyHeadline } from "./components/LatencyHeadline";
 import { StageHistogram } from "./components/StageHistogram";
 import { VerdictDistribution } from "./components/VerdictDistribution";
@@ -9,6 +10,7 @@ import { QuarantinePanel } from "./components/QuarantinePanel";
 import { WithWithoutAgentArmor } from "./components/WithWithoutAgentArmor";
 import { SignaturesModal } from "./components/SignaturesModal";
 import { CustomInspectTester } from "./components/CustomInspectTester";
+import { LoadingScreen } from "./components/LoadingScreen";
 import {
   Verdict,
   GatewayStats,
@@ -21,6 +23,7 @@ const INITIAL_PERCENTILES: PercentileStats = { p50: 0.82, p95: 1.45, avg: 0.94 }
 const INITIAL_MOSS_PERCENTILES: PercentileStats = { p50: 0.76, p95: 1.15, avg: 0.81 };
 
 export default function App() {
+  const [isLoadingApp, setIsLoadingApp] = useState(true);
   const [connected, setConnected] = useState<boolean>(false);
   const [verdicts, setVerdicts] = useState<Verdict[]>([]);
   const [selectedVerdict, setSelectedVerdict] = useState<Verdict | null>(null);
@@ -199,7 +202,9 @@ export default function App() {
   const latestMossMs = latestBTrace?.detail?.retrieval_latency_ms ?? latestBTrace?.latency_ms;
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans selection:bg-cyan-500/30 selection:text-cyan-200">
+    <>
+      {isLoadingApp && <LoadingScreen onComplete={() => setIsLoadingApp(false)} />}
+      <div className={`min-h-screen bg-zinc-950 text-zinc-100 font-sans selection:bg-cyan-500/30 selection:text-cyan-200 ${isLoadingApp ? 'h-screen overflow-hidden' : ''}`}>
       <Header
         connected={connected}
         mossCount={signatures.length || stats.signatures_count}
@@ -213,15 +218,36 @@ export default function App() {
         }}
       />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        {/* Headline Banner */}
-        <LatencyHeadline
-          totalOverhead={stats.total_overhead}
-          mossStage={stats.moss_stage}
-          latestTotalMs={latestTotalMs}
-          latestMossMs={latestMossMs}
+      {/* ── Hero Section with LightRays Background ── */}
+      <section className="relative overflow-hidden bg-zinc-950">
+        {/* WebGL Light Rays — atmospheric background */}
+        <LightRays
+          raysOrigin="top-center"
+          raysColor="#00e5ff"
+          raysSpeed={0.8}
+          lightSpread={1.4}
+          rayLength={1.5}
+          followMouse={true}
+          mouseInfluence={0.15}
+          noiseAmount={0.02}
+          distortion={0.04}
         />
 
+        {/* Content overlay */}
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-8 pb-12">
+          <LatencyHeadline
+            totalOverhead={stats.total_overhead}
+            mossStage={stats.moss_stage}
+            latestTotalMs={latestTotalMs}
+            latestMossMs={latestMossMs}
+          />
+        </div>
+
+        {/* Bottom gradient fade into dashboard */}
+        <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-zinc-950 to-transparent pointer-events-none z-10" />
+      </section>
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         {/* Per-Stage Latency Histogram & Execution Profile */}
         <StageHistogram latestTraces={latestVerdict?.stage_traces} />
 
@@ -273,5 +299,6 @@ export default function App() {
         onPromoteNew={handlePromoteNewSignature}
       />
     </div>
+    </>
   );
 }

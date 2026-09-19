@@ -1,0 +1,22 @@
+FROM node:20-slim
+
+WORKDIR /app
+
+# Install dependencies first for caching
+COPY package.json package-lock.json* ./
+RUN npm install
+
+# Copy the rest of the application
+COPY . .
+
+# Build the Vite app and server
+RUN npm run build
+
+# Environment variables for Docker mode
+ENV EXTERNAL_SENTINEL=true
+ENV SENTINEL_HOST=sentinel
+ENV NODE_ENV=production
+
+EXPOSE 3000
+
+CMD ["npm", "run", "start"]

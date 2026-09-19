@@ -48,20 +48,24 @@ process.on("SIGTERM", () => {
 });
 
 async function startServer() {
-  startPythonSentinel();
+  if (process.env.EXTERNAL_SENTINEL !== "true") {
+    startPythonSentinel();
+  }
 
   const app = express();
 
   // Proxy helper for Python FastAPI
   const proxyToSentinel = (req: express.Request, res: express.Response, targetPath: string) => {
+    const sentinelHost = process.env.SENTINEL_HOST || "127.0.0.1";
     const options: http.RequestOptions = {
-      hostname: "127.0.0.1",
+      hostname: sentinelHost,
+
       port: PYTHON_PORT,
       path: targetPath,
       method: req.method,
       headers: {
         ...req.headers,
-        host: `127.0.0.1:${PYTHON_PORT}`,
+        host: `${sentinelHost}:${PYTHON_PORT}`,
       },
     };
 
