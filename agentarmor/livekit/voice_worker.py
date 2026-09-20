@@ -192,28 +192,30 @@ async def start_livekit_agent_session(room_name: str) -> VoiceSession:
         """Transcribes audio from a track using Deepgram STT."""
         try:
             from livekit.plugins import deepgram as dg_plugin
+            from livekit.agents.utils import http_context
 
-            stt = dg_plugin.STT(api_key=deepgram_api_key)
-            audio_stream = rtc.AudioStream(track)
-            stt_stream = stt.stream()
+            async with http_context.open():
+                stt = dg_plugin.STT(api_key=deepgram_api_key)
+                audio_stream = rtc.AudioStream(track)
+                stt_stream = stt.stream()
 
-            async def _feed_audio():
-                async for frame_event in audio_stream:
-                    if session.status != "active":
-                        break
-                    stt_stream.push_frame(frame_event.frame)
-                stt_stream.end_input()
+                async def _feed_audio():
+                    async for frame_event in audio_stream:
+                        if session.status != "active":
+                            break
+                        stt_stream.push_frame(frame_event.frame)
+                    stt_stream.end_input()
 
-            feed_task = asyncio.create_task(_feed_audio())
+                feed_task = asyncio.create_task(_feed_audio())
 
-            async for event in stt_stream:
-                if hasattr(event, "alternatives") and event.alternatives:
-                    text = event.alternatives[0].text
-                    is_final = event.is_final if hasattr(event, "is_final") else True
-                    if is_final and text.strip():
-                        await process_transcript(session, text.strip(), participant_id)
+                async for event in stt_stream:
+                    if hasattr(event, "alternatives") and event.alternatives:
+                        text = event.alternatives[0].text
+                        is_final = event.is_final if hasattr(event, "is_final") else True
+                        if is_final and text.strip():
+                            await process_transcript(session, text.strip(), participant_id)
 
-            await feed_task
+                await feed_task
 
         except Exception as e:
             logger.error(f"[Voice] Transcription error for {participant_id}: {e}")

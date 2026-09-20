@@ -3,8 +3,11 @@ import http from "http";
 import path from "path";
 import { spawn, ChildProcess } from "child_process";
 import { createServer as createViteServer } from "vite";
+import dotenv from "dotenv";
 
-const PORT = 3000;
+dotenv.config();
+
+const PORT = process.env.PORT || 3000;
 const PYTHON_PORT = 8000;
 let pythonProcess: ChildProcess | null = null;
 

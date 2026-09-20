@@ -36,7 +36,7 @@ export const VoiceSessionPanel: React.FC<VoiceSessionPanelProps> = ({
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
-        const res = await fetch("https://agentarmor-production.up.railway.app/livekit/sessions");
+        const res = await fetch("/api/sentinel/livekit/sessions");
         if (res.ok) {
           const data = await res.json();
           setSessions(data.sessions || []);
@@ -55,17 +55,43 @@ export const VoiceSessionPanel: React.FC<VoiceSessionPanelProps> = ({
     }
   }, [sessions]);
 
+  // Auto-reconnect if the page was refreshed while a session is active
+  useEffect(() => {
+    const active = sessions.find((s) => s.status === "active");
+    if (active && !lkToken && !isStartingSession) {
+      // Re-fetch token to rejoin the existing room
+      fetch("/api/sentinel/livekit/demo-token")
+        .then((res) => {
+          if (res.ok) return res.json();
+          throw new Error("Failed to get token");
+        })
+        .then((data) => {
+          if (data.token && data.livekit_url) {
+            console.log("Auto-reconnect successful!");
+            setLkToken(data.token);
+            setLkUrl(data.livekit_url);
+          } else {
+            console.error("Auto-reconnect failed: empty token");
+          }
+        })
+        .catch((err) => {
+          console.error("Auto-reconnect error:", err);
+          // Ignore, just let them stop the session manually if it fails
+        });
+    }
+  }, [sessions, lkToken, isStartingSession]);
+
   const handleSimulateVoiceAttack = async () => {
     setIsSimulating(true);
     setError(null);
     try {
       const res = await fetch(
-        "https://agentarmor-production.up.railway.app/livekit/simulate-voice-attack?limit=10",
+        "/api/sentinel/livekit/simulate-voice-attack?limit=10",
         { method: "POST" }
       );
       if (res.ok) {
         // Refresh sessions to get the new transcripts
-        const sessRes = await fetch("https://agentarmor-production.up.railway.app/livekit/sessions");
+        const sessRes = await fetch("/api/sentinel/livekit/sessions");
         if (sessRes.ok) {
           const data = await sessRes.json();
           setSessions(data.sessions || []);
@@ -87,7 +113,7 @@ export const VoiceSessionPanel: React.FC<VoiceSessionPanelProps> = ({
     setError(null);
     try {
       // 1. Start the backend voice worker (Deepgram + AgentArmor pipeline)
-      const res = await fetch("https://agentarmor-production.up.railway.app/livekit/start-session", {
+      const res = await fetch("/api/sentinel/livekit/start-session", {
         method: "POST",
       });
       if (!res.ok) {
@@ -96,18 +122,21 @@ export const VoiceSessionPanel: React.FC<VoiceSessionPanelProps> = ({
       }
 
       // 2. Fetch the LiveKit token so the browser can join the room and publish mic
-      const tokenRes = await fetch("https://agentarmor-production.up.railway.app/livekit/demo-token");
+      const tokenRes = await fetch("/api/sentinel/livekit/demo-token");
       if (!tokenRes.ok) {
         const errData = await tokenRes.json().catch(() => ({}));
-        throw new Error(errData.detail || "Failed to get LiveKit token");
+        throw new Error("Token Error: " + (errData.detail || "Failed to get LiveKit token from local backend"));
       }
       
       const tokenData = await tokenRes.json();
+      if (!tokenData.token) {
+        throw new Error("Backend returned empty token. Please check LIVEKIT keys in .env!");
+      }
       setLkToken(tokenData.token);
       setLkUrl(tokenData.livekit_url);
 
       // Refresh the session list
-      const sessRes = await fetch("https://agentarmor-production.up.railway.app/livekit/sessions");
+      const sessRes = await fetch("/api/sentinel/livekit/sessions");
       if (sessRes.ok) {
         const data = await sessRes.json();
         setSessions(data.sessions || []);
@@ -122,7 +151,7 @@ export const VoiceSessionPanel: React.FC<VoiceSessionPanelProps> = ({
   const handleStopSession = async (roomName: string) => {
     try {
       await fetch(
-        `https://agentarmor-production.up.railway.app/livekit/stop-session?room_name=${encodeURIComponent(
+        `/api/sentinel/livekit/stop-session?room_name=${encodeURIComponent(
           roomName
         )}`,
         { method: "POST" }
@@ -131,7 +160,7 @@ export const VoiceSessionPanel: React.FC<VoiceSessionPanelProps> = ({
       setLkToken(null);
       setLkUrl(null);
       
-      const sessRes = await fetch("https://agentarmor-production.up.railway.app/livekit/sessions");
+      const sessRes = await fetch("/api/sentinel/livekit/sessions");
       if (sessRes.ok) {
         const data = await sessRes.json();
         setSessions(data.sessions || []);

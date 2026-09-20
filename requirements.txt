@@ -10,3 +10,4 @@ livekit-agents>=1.0.0
 livekit-plugins-deepgram>=1.0.0
 livekit-plugins-silero>=1.0.0
 livekit-api>=1.0.0
+moss>=1.12.0

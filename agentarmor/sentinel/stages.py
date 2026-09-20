@@ -186,7 +186,7 @@ def call_groq_judge(text: str) -> Optional[Dict[str, Any]]:
             f"TEXT TO EVALUATE:\n{text[:1500]}"
         )
         completion = client.chat.completions.create(
-            model="llama-3.1-70b-versatile",
+            model="llama-3.3-70b-versatile",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.0,
             response_format={"type": "json_object"},

@@ -51,9 +51,9 @@ export default function App() {
   const refreshStats = async () => {
     try {
       const [resStats, resQuar, resSigs] = await Promise.all([
-        fetch("https://agentarmor-production.up.railway.app/stats").then((r) => r.ok ? r.json() : null),
-        fetch("https://agentarmor-production.up.railway.app/quarantine").then((r) => r.ok ? r.json() : null),
-        fetch("https://agentarmor-production.up.railway.app/signatures").then((r) => r.ok ? r.json() : null),
+        fetch("/api/sentinel/stats").then((r) => r.ok ? r.json() : null),
+        fetch("/api/sentinel/quarantine").then((r) => r.ok ? r.json() : null),
+        fetch("/api/sentinel/signatures").then((r) => r.ok ? r.json() : null),
       ]);
 
       if (resStats) {
@@ -82,7 +82,7 @@ export default function App() {
     // Setup SSE connection
     let eventSource: EventSource | null = null;
     try {
-      eventSource = new EventSource("https://agentarmor-production.up.railway.app/stream");
+      eventSource = new EventSource("/stream");
       eventSource.onopen = () => {
         setConnected(true);
       };
@@ -138,7 +138,7 @@ export default function App() {
   const handleRunSimulation = async () => {
     setIsSimulating(true);
     try {
-      const res = await fetch("https://agentarmor-production.up.railway.app/simulate?limit=10", { method: "POST" });
+      const res = await fetch("/api/sentinel/simulate?limit=10", { method: "POST" });
       if (res.ok) {
         await refreshStats();
       }
@@ -153,7 +153,7 @@ export default function App() {
   const handleReleaseQuarantine = async (reqId: string) => {
     setIsLoadingAction(true);
     try {
-      await fetch(`https://agentarmor-production.up.railway.app/quarantine/${reqId}/release`, { method: "POST" });
+      await fetch(`/api/sentinel/quarantine/${reqId}/release`, { method: "POST" });
       await refreshStats();
     } catch (err) {
       console.error("Release error:", err);
@@ -165,7 +165,7 @@ export default function App() {
   const handlePromoteQuarantine = async (reqId: string) => {
     setIsLoadingAction(true);
     try {
-      await fetch(`https://agentarmor-production.up.railway.app/quarantine/${reqId}/promote`, { method: "POST" });
+      await fetch(`/api/sentinel/quarantine/${reqId}/promote`, { method: "POST" });
       await refreshStats();
     } catch (err) {
       console.error("Promote error:", err);
@@ -176,7 +176,7 @@ export default function App() {
 
   const handlePromoteNewSignature = async (text: string, attackClass: string) => {
     try {
-      await fetch("https://agentarmor-production.up.railway.app/signatures/promote", {
+      await fetch("/api/sentinel/signatures/promote", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

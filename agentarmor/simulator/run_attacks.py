@@ -13,6 +13,14 @@ BASE_DIR = Path(__file__).parent.parent.parent
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
+# Fix Windows console encoding
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
+from dotenv import load_dotenv
+load_dotenv(BASE_DIR / ".env")
+
+
 from agentarmor.sentinel.pipeline import detection_pipeline
 from agentarmor.sentinel.schemas import ToolTrustTier, Verdict
 

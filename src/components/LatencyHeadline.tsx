@@ -63,21 +63,44 @@ export const LatencyHeadline: React.FC<LatencyHeadlineProps> = ({
           <div className="flex items-center justify-between text-zinc-400 text-xs mb-1.5">
             <span className="font-medium flex items-center gap-1.5 text-cyan-300">
               <Cpu className="w-3.5 h-3.5 text-cyan-400" />
-              Stage B: Moss In-Process
+              Stage B: Moss SDK vs Request Total
             </span>
             <span className="px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300 text-[10px] font-bold">
               CORE
             </span>
           </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-black tracking-tight text-cyan-400 font-mono">
-              {latestMossMs !== undefined ? latestMossMs.toFixed(3) : mossStage.avg.toFixed(3)}
-            </span>
-            <span className="text-sm font-semibold text-cyan-300">ms</span>
+          <div className="flex items-baseline justify-between mt-2">
+            <div className="flex flex-col">
+              <div className="flex items-baseline gap-1">
+                <span className="text-2xl font-black tracking-tight text-cyan-400 font-mono">
+                  {latestMossMs !== undefined ? latestMossMs.toFixed(3) : mossStage.avg.toFixed(3)}
+                </span>
+                <span className="text-xs font-semibold text-cyan-300">ms</span>
+              </div>
+              <span className="text-[10px] text-cyan-500/70 uppercase tracking-wider">Raw SDK</span>
+            </div>
+            
+            <div className="text-zinc-600 text-xl font-light">/</div>
+
+            <div className="flex flex-col items-end">
+              <div className="flex items-baseline gap-1">
+                <span className="text-2xl font-black tracking-tight text-white font-mono">
+                  {latestTotalMs !== undefined ? latestTotalMs.toFixed(2) : totalOverhead.avg.toFixed(2)}
+                </span>
+                <span className="text-xs font-semibold text-zinc-400">ms</span>
+              </div>
+              <span className="text-[10px] text-zinc-500 uppercase tracking-wider">Total Request</span>
+            </div>
           </div>
-          <div className="mt-2.5 pt-2 border-t border-zinc-800/60 flex items-center justify-between text-xs text-zinc-400">
-            <span>p50: <strong className="text-cyan-200 font-mono">{mossStage.p50.toFixed(3)}ms</strong></span>
-            <span>p95: <strong className="text-cyan-200 font-mono">{mossStage.p95.toFixed(3)}ms</strong></span>
+          <div className="mt-2.5 pt-2 border-t border-zinc-800/60 flex flex-col gap-1 text-[10px] text-zinc-400">
+            <div className="flex justify-between">
+              <span>Raw vector search time (Rust core)</span>
+              <strong className="text-cyan-200 font-mono">{(latestMossMs ?? mossStage.avg) < 1 ? "< 1.0" : (latestMossMs ?? mossStage.avg).toFixed(1)}ms</strong>
+            </div>
+            <div className="flex justify-between">
+              <span>Python async scheduling & overhead</span>
+              <strong className="text-zinc-200 font-mono">~{Math.max(0, (latestTotalMs ?? totalOverhead.avg) - (latestMossMs ?? mossStage.avg)).toFixed(1)}ms</strong>
+            </div>
           </div>
         </div>
 

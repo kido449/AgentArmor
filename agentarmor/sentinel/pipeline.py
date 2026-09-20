@@ -156,10 +156,12 @@ class DetectionPipeline:
             if 0.35 <= fused_score < 0.70:
                 trace_d = run_stage_d(primary_chunk, fused_prior=fused_score)
                 stage_traces.append(trace_d)
-                if trace_d.triggered:
-                    fused_score = max(fused_score, trace_d.score)
-                    if trace_d.detail.get("attack_class") and trace_d.detail["attack_class"] != "unknown":
-                        attack_class = trace_d.detail["attack_class"]
+                
+                # LLM Adjudication replaces the prior fused score
+                fused_score = trace_d.score
+                
+                if trace_d.detail.get("attack_class") and trace_d.detail["attack_class"] != "unknown":
+                    attack_class = trace_d.detail["attack_class"]
             else:
                 stage_traces.append(
                     StageTrace(

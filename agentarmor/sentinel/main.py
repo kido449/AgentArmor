@@ -52,9 +52,12 @@ logger = logging.getLogger("agentarmor.sentinel")
 async def lifespan(app: FastAPI):
     logger.info("Starting AgentArmor Sentinel Gateway...")
     await telemetry_bus.connect()
-    # Warmup Moss index query
+    # Initialise real Moss SDK index (creates index, generates embeddings, loads into memory)
+    await moss_index.async_warmup()
+    # Warmup query
     _, _ = moss_index.query("warmup check", top_k=1)
-    logger.info(f"Moss semantic index ready: {moss_index.count} signatures, v{moss_index.version}")
+    mode_str = "REAL Moss SDK (moss-minilm)" if moss_index.using_real_moss else "FALLBACK n-gram engine"
+    logger.info(f"Moss semantic index ready [{mode_str}]: {moss_index.count} signatures, v{moss_index.version}")
     yield
     logger.info("AgentArmor Sentinel shutting down.")
 

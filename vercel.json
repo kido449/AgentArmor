@@ -2,7 +2,15 @@
   "rewrites": [
     {
       "source": "/api/sentinel/:path*",
-      "destination": "https://agentarmor-production.up.railway.app/:path*"
+      "destination": "https://agentarmor-production.up.railway.app/api/sentinel/:path*"
+    },
+    {
+      "source": "/stream",
+      "destination": "https://agentarmor-production.up.railway.app/stream"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
