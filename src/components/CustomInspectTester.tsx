@@ -41,7 +41,7 @@ export const CustomInspectTester: React.FC<CustomInspectTesterProps> = ({ onInsp
 
     setIsSubmitting(true);
     try {
-      const res = await fetch("/api/sentinel/inspect", {
+      const res = await fetch("https://agentarmor-production.up.railway.app/inspect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

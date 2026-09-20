@@ -12,7 +12,7 @@ export const WithWithoutAgentArmor: React.FC = () => {
   const handleRunStep = async () => {
     setIsRunning(true);
     try {
-      const res = await fetch("/api/sentinel/agent/run-step", {
+      const res = await fetch("https://agentarmor-production.up.railway.app/agent/run-step", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

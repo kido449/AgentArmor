@@ -14,6 +14,8 @@ import {
   Loader2,
 } from "lucide-react";
 import { VoiceSession, VoiceTranscript, ActionType } from "../types";
+import { LiveKitRoom, RoomAudioRenderer } from "@livekit/components-react";
+import { Track } from "livekit-client";
 
 interface VoiceSessionPanelProps {
   onVoiceVerdictReceived?: () => void;
@@ -26,13 +28,15 @@ export const VoiceSessionPanel: React.FC<VoiceSessionPanelProps> = ({
   const [isSimulating, setIsSimulating] = useState(false);
   const [isStartingSession, setIsStartingSession] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lkToken, setLkToken] = useState<string | null>(null);
+  const [lkUrl, setLkUrl] = useState<string | null>(null);
   const feedRef = useRef<HTMLDivElement>(null);
 
   // Poll sessions for live transcript updates
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
-        const res = await fetch("/api/sentinel/livekit/sessions");
+        const res = await fetch("https://agentarmor-production.up.railway.app/livekit/sessions");
         if (res.ok) {
           const data = await res.json();
           setSessions(data.sessions || []);
@@ -56,12 +60,12 @@ export const VoiceSessionPanel: React.FC<VoiceSessionPanelProps> = ({
     setError(null);
     try {
       const res = await fetch(
-        "/api/sentinel/livekit/simulate-voice-attack?limit=10",
+        "https://agentarmor-production.up.railway.app/livekit/simulate-voice-attack?limit=10",
         { method: "POST" }
       );
       if (res.ok) {
         // Refresh sessions to get the new transcripts
-        const sessRes = await fetch("/api/sentinel/livekit/sessions");
+        const sessRes = await fetch("https://agentarmor-production.up.railway.app/livekit/sessions");
         if (sessRes.ok) {
           const data = await sessRes.json();
           setSessions(data.sessions || []);
@@ -82,21 +86,34 @@ export const VoiceSessionPanel: React.FC<VoiceSessionPanelProps> = ({
     setIsStartingSession(true);
     setError(null);
     try {
-      const res = await fetch("/api/sentinel/livekit/start-session", {
+      // 1. Start the backend voice worker (Deepgram + AgentArmor pipeline)
+      const res = await fetch("https://agentarmor-production.up.railway.app/livekit/start-session", {
         method: "POST",
       });
-      if (res.ok) {
-        const sessRes = await fetch("/api/sentinel/livekit/sessions");
-        if (sessRes.ok) {
-          const data = await sessRes.json();
-          setSessions(data.sessions || []);
-        }
-      } else {
+      if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        setError(errData.detail || "Failed to start voice session");
+        throw new Error(errData.detail || "Failed to start backend voice session");
       }
-    } catch (err) {
-      setError("LiveKit credentials required for live voice session");
+
+      // 2. Fetch the LiveKit token so the browser can join the room and publish mic
+      const tokenRes = await fetch("https://agentarmor-production.up.railway.app/livekit/demo-token");
+      if (!tokenRes.ok) {
+        const errData = await tokenRes.json().catch(() => ({}));
+        throw new Error(errData.detail || "Failed to get LiveKit token");
+      }
+      
+      const tokenData = await tokenRes.json();
+      setLkToken(tokenData.token);
+      setLkUrl(tokenData.livekit_url);
+
+      // Refresh the session list
+      const sessRes = await fetch("https://agentarmor-production.up.railway.app/livekit/sessions");
+      if (sessRes.ok) {
+        const data = await sessRes.json();
+        setSessions(data.sessions || []);
+      }
+    } catch (err: any) {
+      setError(err.message || "LiveKit credentials required in .env");
     } finally {
       setIsStartingSession(false);
     }
@@ -105,12 +122,16 @@ export const VoiceSessionPanel: React.FC<VoiceSessionPanelProps> = ({
   const handleStopSession = async (roomName: string) => {
     try {
       await fetch(
-        `/api/sentinel/livekit/stop-session?room_name=${encodeURIComponent(
+        `https://agentarmor-production.up.railway.app/livekit/stop-session?room_name=${encodeURIComponent(
           roomName
         )}`,
         { method: "POST" }
       );
-      const sessRes = await fetch("/api/sentinel/livekit/sessions");
+      // Disconnect frontend from LiveKit room
+      setLkToken(null);
+      setLkUrl(null);
+      
+      const sessRes = await fetch("https://agentarmor-production.up.railway.app/livekit/sessions");
       if (sessRes.ok) {
         const data = await sessRes.json();
         setSessions(data.sessions || []);
@@ -223,7 +244,7 @@ export const VoiceSessionPanel: React.FC<VoiceSessionPanelProps> = ({
                 }`}
               />
               <span>
-                {isStartingSession ? "Connecting..." : "Start Live Session"}
+                {isStartingSession ? "Connecting..." : "Connect Microphone"}
               </span>
             </button>
           )}
@@ -256,14 +277,35 @@ export const VoiceSessionPanel: React.FC<VoiceSessionPanelProps> = ({
 
       {/* Active session indicator */}
       {activeSession && (
-        <div className="mb-3 px-3 py-2 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-violet-400 animate-pulse" />
-          <span className="text-xs text-violet-300">
-            <strong>Live Session:</strong> {activeSession.room_name} •{" "}
-            {activeSession.participants.length} participant(s) •{" "}
-            {activeSession.transcript_count} transcripts
-          </span>
+        <div className="mb-3 px-3 py-2 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-violet-400 animate-pulse shadow-[0_0_8px_rgba(167,139,250,0.8)]" />
+            <span className="text-xs text-violet-300">
+              <strong>Live Session:</strong> {activeSession.room_name} •{" "}
+              {activeSession.participants.length} participant(s) •{" "}
+              {activeSession.transcript_count} transcripts
+            </span>
+          </div>
+          {lkToken && (
+            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center gap-1.5 animate-pulse">
+              <Mic className="w-3 h-3" /> Mic is HOT
+            </span>
+          )}
         </div>
+      )}
+
+      {/* Actual LiveKit Room hidden overlay - connects to microphone */}
+      {lkToken && lkUrl && (
+        <LiveKitRoom
+          serverUrl={lkUrl}
+          token={lkToken}
+          connect={true}
+          audio={true}
+          video={false}
+          className="hidden"
+        >
+          <RoomAudioRenderer />
+        </LiveKitRoom>
       )}
 
       {/* Transcript Feed */}
