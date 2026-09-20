@@ -82,7 +82,7 @@ export default function App() {
     // Setup SSE connection
     let eventSource: EventSource | null = null;
     try {
-      eventSource = new EventSource("/stream");
+      eventSource = new EventSource("/api/sentinel/stream");
       eventSource.onopen = () => {
         setConnected(true);
       };
