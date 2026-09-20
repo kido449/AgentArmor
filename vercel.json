@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/sentinel/:path*",
+      "destination": "https://agentarmor-production.up.railway.app/:path*"
+    }
+  ]
+}
