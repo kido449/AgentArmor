@@ -28,4 +28,5 @@ COPY agentarmor/ ./agentarmor/
 
 # Start the unified Node.js server (which spawns Python internally)
 # Railway provides $PORT. Our server.ts listens on process.env.PORT || 3000
+ENV NODE_ENV=production
 CMD ["npm", "run", "start"]

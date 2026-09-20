@@ -107,7 +107,8 @@ async function startServer() {
   });
 
   // Vite integration
-  if (process.env.NODE_ENV !== "production") {
+  const isBundled = __dirname.includes("dist") || __filename.includes("server.cjs");
+  if (process.env.NODE_ENV !== "production" && !isBundled) {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
