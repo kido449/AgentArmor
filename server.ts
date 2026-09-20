@@ -11,7 +11,10 @@ const PORT = process.env.PORT || 3000;
 const PYTHON_PORT = 8000;
 let pythonProcess: ChildProcess | null = null;
 
-function startPythonSentinel() {
+export const pythonLogs: string[] = [];
+
+export function startPythonSentinel() {
+  if (process.env.EXTERNAL_SENTINEL === "true") return;
   if (pythonProcess) return;
 
   console.log("[Node Server] Spawning Python Sentinel Gateway on port " + PYTHON_PORT + "...");
@@ -20,10 +23,24 @@ function startPythonSentinel() {
     pythonExecutable,
     ["-m", "uvicorn", "agentarmor.sentinel.main:app", "--port", String(PYTHON_PORT), "--host", "127.0.0.1"],
     {
-      stdio: "inherit",
+      stdio: "pipe",
       env: { ...process.env },
     }
   );
+
+  pythonProcess.stdout?.on("data", (data) => {
+    const msg = data.toString();
+    console.log("[Python]: " + msg);
+    pythonLogs.push(msg);
+    if (pythonLogs.length > 200) pythonLogs.shift();
+  });
+
+  pythonProcess.stderr?.on("data", (data) => {
+    const msg = data.toString();
+    console.error("[Python ERR]: " + msg);
+    pythonLogs.push("[ERR] " + msg);
+    if (pythonLogs.length > 200) pythonLogs.shift();
+  });
 
   pythonProcess.on("error", (err) => {
     console.error("[Python Sentinel Error]:", err);
@@ -99,6 +116,11 @@ async function startServer() {
   // Direct SSE Stream proxy
   app.use("/stream", (req, res) => {
     proxyToSentinel(req, res, "/stream");
+  });
+
+  // Python Logs
+  app.get("/api/python-logs", (req, res) => {
+    res.json({ logs: pythonLogs });
   });
 
   // Health check
