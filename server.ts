@@ -15,7 +15,7 @@ function startPythonSentinel() {
   if (pythonProcess) return;
 
   console.log("[Node Server] Spawning Python Sentinel Gateway on port " + PYTHON_PORT + "...");
-  const pythonExecutable = process.platform === 'win32' ? 'python' : 'python3';
+  const pythonExecutable = "python";
   pythonProcess = spawn(
     pythonExecutable,
     ["-m", "uvicorn", "agentarmor.sentinel.main:app", "--port", String(PYTHON_PORT), "--host", "127.0.0.1"],
@@ -107,7 +107,7 @@ async function startServer() {
   });
 
   // Vite integration
-  const isBundled = __dirname.includes("dist") || __filename.includes("server.cjs");
+  const isBundled = process.argv[1] && process.argv[1].endsWith("server.cjs");
   if (process.env.NODE_ENV !== "production" && !isBundled) {
     const vite = await createViteServer({
       server: { middlewareMode: true },
